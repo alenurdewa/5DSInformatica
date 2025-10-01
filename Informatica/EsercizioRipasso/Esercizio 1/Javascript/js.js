@@ -5,6 +5,7 @@ function contaCaratteri() {
     //Qua prendiamo il campo del form
     input = document.getElementById("testo")
 
+    console.log(input.value)
     //Prendo il testo che mi fa vedere quanti car rimangono
     counter = document.getElementById("counter")
 
@@ -18,5 +19,5 @@ function contaCaratteri() {
     //Calcolo quanti caratteri rimangono
     restanti = max - usati
 
-    counter.textContent = restanti + " caratteri rimasti"
+    counter.innerText = restanti + " caratteri rimasti"
 }
