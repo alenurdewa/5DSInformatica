@@ -296,17 +296,8 @@ var_dump($array); // mostra tipo + valore dettagliato
 
 ------------------------------------------------------------------------
 
-📌 **In sintesi:**\
-- `list()` e `[]` → destrutturazione di array semplici\
-- `["chiave" => $var]` → destrutturazione associativa\
-- `array_merge()` e `...` → fusione di array\
-- `array_unique()` → elimina duplicati\
-- `print_r()` / `var_dump()` → debug dei dati
-
----
-
 📌 **In sintesi:**  
-Hai toccato le basi principali:  
+Basi principali:  
 - `echo` e output HTML  
 - variabili e valori booleani  
 - `if`, `==`, `===`  
@@ -316,4 +307,5 @@ Hai toccato le basi principali:
 - debug con `var_dump`  
 - funzioni base per manipolare stringhe  
 - include/require per organizzare il codice
+- destrutturazione e merge di array indicizzati e associativi
 
