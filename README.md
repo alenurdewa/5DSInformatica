@@ -1,14 +1,14 @@
-# 5DSInformatica
+# \# 5DS Informatica
 
+# 
 
+# \## School Year 2025/2026
 
-\## School Year 2025/2026
+# 
 
+# \### Student: \*\*Alessandro Berti\*\*
 
+# 
 
-\## Student: Alessandro Berti
-
-
-
-\## Class: 5DS
+# \### Class: \*\*5DS\*\*
 
