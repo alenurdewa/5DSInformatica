@@ -1,4 +1,4 @@
-# 📘 Appunti PHP -- Destrutturazione e Merge Array
+# 📘 Appunti PHP -- Destrutturazione, Merge e Array Unici
 
 ## 🔹 Destrutturazione di un array indicizzato
 
@@ -47,7 +47,7 @@ echo $i; // Via Roma
 
 ------------------------------------------------------------------------
 
-## 🔹 Merge di array
+## 🔹 Merge di array associativi
 
 ``` php
 $nome = [
@@ -73,6 +73,26 @@ $dati4 = [...$nome, ...$indirizzo, "avvocato"];
 
 ------------------------------------------------------------------------
 
+## 🔹 Merge e rimozione dei duplicati (array numerici)
+
+``` php
+$arr_numerico1 = [1,2,3,4];
+$arr_numerico2 = [1,2,3,4,5,6];
+
+$datiNumerici = array_unique([...$arr_numerico1, ...$arr_numerico2]);
+echo "<br>";
+print_r($datiNumerici);
+```
+
+-   `array_unique()` rimuove automaticamente i **valori duplicati**.\
+-   Lo spread `...` unisce più array in uno solo prima del filtraggio.
+
+Risultato:
+
+    Array ( [0] => 1 [1] => 2 [2] => 3 [3] => 4 [7] => 5 [8] => 6 )
+
+------------------------------------------------------------------------
+
 ## 🔹 Funzioni utili per gli array
 
 ``` php
@@ -80,13 +100,14 @@ print_r($array); // mostra contenuto leggibile
 var_dump($array); // mostra tipo + valore dettagliato
 ```
 
--   `print_r()` è utile per debug veloce.\
--   `var_dump()` mostra anche tipi di dato e struttura completa.
+-   `print_r()` → debug veloce.\
+-   `var_dump()` → tipi di dato e struttura completa.
 
 ------------------------------------------------------------------------
 
 📌 **In sintesi:**\
 - `list()` e `[]` → destrutturazione di array semplici\
-- `["chiave" => $var]` → destrutturazione di array associativi\
-- `array_merge()` e `...` → fusione e copia di array\
+- `["chiave" => $var]` → destrutturazione associativa\
+- `array_merge()` e `...` → fusione di array\
+- `array_unique()` → elimina duplicati\
 - `print_r()` / `var_dump()` → debug dei dati
