@@ -296,6 +296,57 @@ var_dump($array); // mostra tipo + valore dettagliato
 
 ------------------------------------------------------------------------
 
+📘 Appunti PHP – Superglobali e Form
+🔹 Superglobali principali
+- `$_SERVER` → info sul server e la richiesta (metodo, IP, browser, ecc.)  
+- `$_GET`, `$_POST` → dati inviati da form  
+- `$_REQUEST` → unisce GET e POST  
+- `$_SESSION` → salva dati temporanei dell’utente  
+- `$_COOKIE` → dati salvati nel browser  
+- `$GLOBALS` → contiene tutte le variabili globali
+
+🔹 Esempio pratico con form e sessioni
+```php
+session_start();
+
+$nome = $_POST['nome'] ?? 'Non dato';
+$eta = isset($_POST['eta']) ? (int)$_POST['eta'] : 'NULL';
+
+$mail = filter_input(INPUT_POST, "mail", FILTER_VALIDATE_EMAIL);
+
+echo "<br>Registrazione effettuata da $nome, con età $eta e email $mail";
+
+$metodo = $_SERVER['REQUEST_METHOD'];
+$user_a = $_SERVER['HTTP_USER_AGENT'];
+$ip = $_SERVER['REMOTE_ADDR'];
+
+echo "Il metodo è: $metodo, ip $ip, $user_a";
+
+$_SESSION["visite"] = 1;
+$_SESSION["nomeUtente"] = $nome;
+
+var_dump($_SESSION);
+session_destroy();
+```
+🔸 Spiegazione semplice:
+- `$_POST['nome'] ?? 'Non dato'` → se non c’è il nome, usa “Non dato”  
+- `isset($_POST['eta']) ? (int)$_POST['eta'] : 'NULL'` → controlla se il valore esiste, altrimenti imposta NULL  
+- `filter_input(..., FILTER_VALIDATE_EMAIL)` → controlla che la mail sia valida  
+- `$_SERVER` contiene info sulla richiesta HTTP  
+- `$_SESSION` serve per salvare variabili da una pagina all’altra  
+- `session_destroy()` chiude la sessione corrente
+
+🔸 Form HTML collegato
+```html
+<form action="index.php" method="post">
+    <input type="text" name="nome"><br>
+    <input type="text" name="eta"><br>
+    <input type="text" name="mail"><br>
+    <input type="submit" name="invio">
+</form>
+```
+------------------------------------------------------------------------
+
 📌 **In sintesi:**  
 Basi principali:  
 - `echo` e output HTML  
@@ -308,4 +359,5 @@ Basi principali:
 - funzioni base per manipolare stringhe  
 - include/require per organizzare il codice
 - destrutturazione e merge di array indicizzati e associativi
+- superglobali ($_POST, $_SERVER, $_SESSION, ecc.) e gestione form con validazione email
 
