@@ -347,6 +347,132 @@ session_destroy();
 ```
 ------------------------------------------------------------------------
 
+# 📘 Appunti PHP – Basi + Cookie & Login/Carrello
+
+## 🔹 Stampa a schermo
+```php
+echo "Ciao";
+echo "<h1>Questo è un titolo</h1>";
+```
+- `echo` serve a stampare testo o HTML.  
+- Puoi mischiare codice **PHP** e **HTML puro** nello stesso file.
+
+---
+
+## 🔹 Variabili e valori booleani
+```php
+$var1 = 0;
+
+if ($var1) {
+    echo "è un valore true";
+} else {
+    echo "è un valore false";
+}
+```
+- In PHP **0, null, stringa vuota `""`, array vuoto `[]` → false** nelle condizioni.  
+- Ogni altro valore → true.
+
+---
+
+## 🔹 Debug delle variabili
+```php
+var_dump($var1);
+```
+- Mostra **tipo e valore** della variabile.
+
+---
+
+## 🔹 Condizioni e confronti
+```php
+$var2 = '2';
+$var3 = 2;
+
+if ($var2 == $var3) { ... }
+```
+- `==` → confronto solo sul **valore**.  
+- `===` → confronto su **valore e tipo**.
+- `'2' == 2` → true, `'2' === 2` → false
+
+---
+
+## 🔹 Array associativi avanzato, sessioni e cookie
+### Sessioni
+```php
+session_start();
+$_SESSION['user'] = 'Alessandro';
+```
+- Permette di salvare dati temporanei per l'utente.
+- Dura fino alla chiusura del browser o a `session_destroy()`.
+
+### Cookie
+```php
+setcookie('user', 'Alessandro', time()+3600); // 1 ora
+echo $_COOKIE['user'];
+setcookie('user', '', time()-3600); // cancella cookie
+```
+- I cookie rimangono anche dopo aver chiuso il browser.
+- Possono salvare preferenze, login persistenti, carrelli.
+
+---
+
+### Esempio mini-login SESSION + COOKIE
+```php
+// login.php
+session_start();
+$username = $_POST['username'] ?? '';
+$password = $_POST['password'] ?? '';
+$ricordami = isset($_POST['ricordami']);
+
+if($username === 'admin' && $password === '1234') {
+    $_SESSION['user'] = $username;
+    if($ricordami){ setcookie('user', $username, time()+7*24*60*60); }
+    header('Location: area_riservata.php');
+} else {
+    echo 'Credenziali sbagliate';
+}
+```
+```php
+// area_riservata.php
+session_start();
+if(!isset($_SESSION['user']) && isset($_COOKIE['user'])){
+    $_SESSION['user'] = $_COOKIE['user'];
+}
+```
+```php
+// logout.php
+session_start();
+session_unset();
+session_destroy();
+setcookie('user', '', time()-3600);
+```
+
+### Esempio mini-carrello con COOKIE
+```php
+// aggiungi al carrello
+$carrello = isset($_COOKIE['carrello']) ? json_decode($_COOKIE['carrello'], true) : [];
+$prodotto = $_POST['prodotto'] ?? '';
+if($prodotto){
+    $carrello[$prodotto] = ($carrello[$prodotto] ?? 0) + 1;
+    setcookie('carrello', json_encode($carrello), time()+7*24*60*60);
+}
+```
+```php
+// svuota carrello
+setcookie('carrello', '', time()-3600);
+```
+
+---
+
+## 🔹 Superglobali principali
+- `$_SERVER` → info sul server e richiesta HTTP
+- `$_GET`, `$_POST` → dati da form
+- `$_REQUEST` → unisce GET e POST
+- `$_SESSION` → dati temporanei lato server
+- `$_COOKIE` → dati salvati lato client
+- `$GLOBALS` → tutte le variabili globali
+
+------------------------------------------------------------------------
+
 📌 **In sintesi:**  
 Basi principali:  
 - `echo` e output HTML  
