@@ -171,7 +171,27 @@ I dati vengono poi usati in PHP, ad esempio con un ciclo `foreach`.
 
 ---
 
-## 11. Riassunto finale
+## 11. Inserimento dati complessi con foreach
+
+Quando si hanno più campi, si può usare un ciclo `foreach` con `prepare()` e `execute()` per inserire ogni riga in sicurezza:
+```php
+foreach ($righe as $riga) {
+    $stmt = $pdo->prepare("INSERT INTO libri (autore, nazionalita, titolo, editore, pagine) 
+                           VALUES (?, ?, ?, ?, ?)");
+    $stmt->execute([
+        $riga['autore'],
+        $riga['nazionalita'],
+        $riga['titolo'],
+        $riga['editore'],
+        $riga['pagine']
+    ]);
+}
+```
+Questo metodo è sicuro e evita problemi di SQL Injection, oltre a gestire correttamente tutti i campi richiesti.
+
+---
+
+## 12. Riassunto finale
 
 - PDO è il metodo consigliato per lavorare con database in PHP
 - Funziona con molti database
@@ -179,6 +199,5 @@ I dati vengono poi usati in PHP, ad esempio con un ciclo `foreach`.
 - `exec()` serve per comandi SQL senza risultati
 - XAMPP permette di lavorare in locale
 - Gli errori non vanno mostrati in produzione
-
-Questo è tutto ciò che serve sapere per iniziare a usare PDO in modo corretto e sicuro.
+- Per dati complessi, cicli `foreach` con `prepare()` sono la soluzione corretta
 
