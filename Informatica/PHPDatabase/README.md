@@ -9,7 +9,7 @@ Con PDO è possibile:
 - collegarsi a un database
 - eseguire query SQL
 - gestire errori in modo controllato
-- inserire e leggere dati in modo sicuro
+- inserire, modificare e leggere dati in modo sicuro
 
 PDO è considerato moderno, leggero e sicuro.
 
@@ -114,11 +114,6 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS user (
 )");
 ```
 
-La tabella contiene:
-- `id`: identificatore unico
-- `nome`: nome dell’utente
-- `cognome`: cognome dell’utente
-
 ---
 
 ## 8. Inserimento dati in modo sicuro
@@ -153,8 +148,6 @@ Mario,Rossi
 4. Separazione dei valori con `explode()`
 5. Inserimento nel database con `prepare()`
 
-Questo permette di importare grandi quantità di dati in modo ordinato e sicuro.
-
 ---
 
 ## 10. Lettura dei dati dal database
@@ -167,13 +160,11 @@ $stmt = $pdo->query("SELECT titolo, autore FROM libri");
 $righe = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ```
 
-I dati vengono poi usati in PHP, ad esempio con un ciclo `foreach`.
-
 ---
 
 ## 11. Inserimento dati complessi con foreach
 
-Quando si hanno più campi, si può usare un ciclo `foreach` con `prepare()` e `execute()` per inserire ogni riga in sicurezza:
+Quando si hanno più campi, si può usare un ciclo `foreach` con `prepare()` e `execute()`:
 ```php
 foreach ($righe as $riga) {
     $stmt = $pdo->prepare("INSERT INTO libri (autore, nazionalita, titolo, editore, pagine) 
@@ -187,17 +178,79 @@ foreach ($righe as $riga) {
     ]);
 }
 ```
-Questo metodo è sicuro e evita problemi di SQL Injection, oltre a gestire correttamente tutti i campi richiesti.
 
 ---
 
-## 12. Riassunto finale
+## 12. Cancellazione dei dati (DELETE) con PDO
+
+Per eliminare un record **non si deve mai inserire direttamente l’id nella query**.
+
+Esempio corretto:
+```php
+if (isset($_GET['delete_id'])) {
+    $id = $_GET['delete_id'];
+
+    $stmt = $pdo->prepare("DELETE FROM libri WHERE id = :id");
+    $stmt->bindParam(":id", $id, PDO::PARAM_INT);
+    $stmt->execute();
+}
+```
+
+- `:id` è un **placeholder**
+- `bindParam()` assegna il valore al placeholder
+- `execute()` esegue la query
+
+❌ **Da NON fare**:
+```php
+$pdo->exec("DELETE FROM libri WHERE id = $id");
+```
+
+Questo espone il codice a **SQL Injection** (l’utente potrebbe aggiungere altre istruzioni SQL).
+
+---
+
+## 13. Modifica dei dati (UPDATE) con PDO
+
+Per aggiornare dati provenienti da un form (`POST`) si usa sempre `prepare()`.
+
+Esempio:
+```php
+if (isset($_POST['update'])) {
+    $id = $_POST['id'];
+    $titolo = $_POST['titolo'];
+    $numero_pagine = $_POST['numero_pagine'];
+
+    if (is_numeric($numero_pagine) && $numero_pagine > 1) {
+        $stmt = $pdo->prepare("
+            UPDATE libri
+            SET titolo = :titolo, numero_pagine = :numero_pagine
+            WHERE id = :id
+        ");
+
+        $stmt->bindParam(":titolo", $titolo);
+        $stmt->bindParam(":numero_pagine", $numero_pagine, PDO::PARAM_INT);
+        $stmt->bindParam(":id", $id, PDO::PARAM_INT);
+        $stmt->execute();
+    } else {
+        echo "<p style='color:red'>Il numero di pagine deve essere un numero maggiore di 1</p>";
+    }
+}
+```
+
+I valori:
+- arrivano dal form tramite `POST`
+- vengono inseriti con placeholder (`:nome`)
+- sono controllati prima dell’esecuzione
+
+---
+
+## 14. Riassunto finale
 
 - PDO è il metodo consigliato per lavorare con database in PHP
 - Funziona con molti database
-- Usa `prepare()` ed `execute()` per sicurezza
-- `exec()` serve per comandi SQL senza risultati
-- XAMPP permette di lavorare in locale
-- Gli errori non vanno mostrati in produzione
-- Per dati complessi, cicli `foreach` con `prepare()` sono la soluzione corretta
-
+- **Mai inserire dati utente direttamente nelle query**
+- Usare sempre `prepare()`, `bindParam()` ed `execute()`
+- `exec()` si usa solo per query senza input dell’utente
+- DELETE e UPDATE devono sempre usare placeholder
+- I controlli sui dati (tipo, valore) vanno fatti prima dell’esecuzione
+- XAMPP permette di lavorare in locale in modo semplice e sicuro
