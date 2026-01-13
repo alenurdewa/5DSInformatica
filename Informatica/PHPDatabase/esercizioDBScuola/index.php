@@ -1,94 +1,81 @@
 <?php
+require 'funzioni.php';
 
-$dsn = "mysql:host=localhost;port=3306;charset=utf8";
-$user = "Alessandro";
-$password = "miao";
-
-$pdo = new PDO($dsn, $user, $password);
-
-$pdo->exec("CREATE DATABASE IF NOT EXISTS istitutoScolastico");
-$pdo->exec("USE istitutoScolastico");
-
-$pdo->exec("
-CREATE TABLE IF NOT EXISTS docenti (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    nome VARCHAR(50)
-)
-");
-
-$pdo->exec("
-CREATE TABLE IF NOT EXISTS corsi (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    nome VARCHAR(50),
-    anno INT,
-    docente_id INT,
-    FOREIGN KEY (docente_id) REFERENCES docenti(id)
-)
-");
-
-$pdo->exec("
-CREATE TABLE IF NOT EXISTS studenti (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    nome VARCHAR(50),
-    cognome VARCHAR(50),
-    corso_id INT,
-    FOREIGN KEY (corso_id) REFERENCES corsi(id)
-)
-");
-
-$file = fopen("istitutoScolastico.csv", "r");
-fgetcsv($file);
-
-while (($row = fgetcsv($file, 1000, ",")) !== false) {
-
-    [$nome, $cognome, $corso, $docente, $anno] = $row;
-
-    $stmt = $pdo->prepare("SELECT id FROM docenti WHERE nome = ?");
-    $stmt->execute([$docente]);
-    $docente_id = $stmt->fetchColumn();
-
-    if (!$docente_id) {
-        $stmt = $pdo->prepare("INSERT INTO docenti (nome) VALUES (?)");
-        $stmt->execute([$docente]);
-        $docente_id = $pdo->lastInsertId();
-    }
-
-    $stmt = $pdo->prepare("SELECT id FROM corsi WHERE nome = ? AND anno = ?");
-    $stmt->execute([$corso, $anno]);
-    $corso_id = $stmt->fetchColumn();
-
-    if (!$corso_id) {
-        $stmt = $pdo->prepare("INSERT INTO corsi (nome, anno, docente_id) VALUES (?, ?, ?)");
-        $stmt->execute([$corso, $anno, $docente_id]);
-        $corso_id = $pdo->lastInsertId();
-    }
-
-    $stmt = $pdo->prepare("INSERT INTO studenti (nome, cognome, corso_id) VALUES (?, ?, ?)");
-    $stmt->execute([$nome, $cognome, $corso_id]);
-}
-
-fclose($file);
-
-echo "<h2>Vista completa (JOIN)</h2>";
-
-$stmt = $pdo->query("
-SELECT 
-    studenti.nome,
-    studenti.cognome,
-    corsi.nome AS corso,
-    corsi.anno,
-    docenti.nome AS docente
-FROM studenti
-JOIN corsi ON studenti.corso_id = corsi.id
-JOIN docenti ON corsi.docente_id = docenti.id
-");
-
-foreach ($stmt as $row) {
-    echo $row["nome"] . " " .
-         $row["cognome"] . " - " .
-         $row["corso"] . " (" .
-         $row["anno"] . ") - " .
-         $row["docente"] . "<br>";
-}
-
+// Capisco cosa vuole vedere l'utente
+$view = $_GET['view'] ?? 'join'; 
 ?>
+
+<!DOCTYPE html>
+<html>
+<head><title>Scuola</title></head>
+<body>
+
+    <nav>
+        <a href="?view=join">Vista Completa</a> | 
+        <a href="?view=studenti">Studenti</a> | 
+        <a href="?view=corsi">Corsi</a> | 
+        <a href="?view=docenti">Docenti</a>
+    </nav>
+    <br>
+
+    <form method="GET">
+        <input type="hidden" name="view" value="cerca">
+        Cerca Cognome: <input type="text" name="q">
+        <button>Cerca</button>
+    </form>
+    
+    <hr>
+
+    <table border="1">
+    
+    <?php
+    
+    if ($view == 'studenti') {
+        $righe = getStudenti($pdo);
+        echo "<tr><th>Nome</th><th>Cognome</th></tr>";
+        
+        foreach($righe as $r) {
+            echo "<tr><td>{$r['nome']}</td><td>{$r['cognome']}</td></tr>";
+        }
+
+    } elseif ($view == 'corsi') {
+        $righe = getCorsi($pdo);
+        echo "<tr><th>Corso</th><th>Anno</th></tr>";
+
+        foreach($righe as $r) {
+            echo "<tr><td>{$r['nome']}</td><td>{$r['anno']}</td></tr>";
+        }
+
+    } elseif ($view == 'docenti') {
+        $righe = getDocenti($pdo);
+        echo "<tr><th>Nome Docente</th></tr>";
+
+        foreach($righe as $r) {
+            echo "<tr><td>{$r['nome']}</td></tr>";
+        }
+
+    } else {
+        if ($view == 'cerca') {
+            $q = $_GET['q'] ?? '';
+            $righe = cercaStudente($pdo, $q);
+            echo "<caption>Risultati ricerca per: $q</caption>";
+        } else {
+            $righe = getTutto($pdo);
+        }
+
+        echo "<tr><th>Studente</th><th>Corso</th><th>Docente</th></tr>";
+
+        foreach($righe as $r) {
+            echo "<tr>
+                    <td>{$r['nome']} {$r['cognome']}</td>
+                    <td>{$r['corso']}</td>
+                    <td>{$r['docente']}</td>
+                  </tr>";
+        }
+    }
+    ?>
+    
+    </table>
+
+</body>
+</html>

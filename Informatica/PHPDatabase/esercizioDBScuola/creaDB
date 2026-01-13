@@ -1,0 +1,14 @@
+<?php
+require 'config.php';
+
+$pdo->exec("CREATE DATABASE IF NOT EXISTS istitutoScolastico");
+$pdo->exec("USE istitutoScolastico");
+
+$pdo->exec("CREATE TABLE IF NOT EXISTS docenti (id INT AUTO_INCREMENT PRIMARY KEY, nome VARCHAR(50))");
+
+$pdo->exec("CREATE TABLE IF NOT EXISTS corsi (id INT AUTO_INCREMENT PRIMARY KEY, nome VARCHAR(50), anno INT, docente_id INT, FOREIGN KEY (docente_id) REFERENCES docenti(id))");
+
+$pdo->exec("CREATE TABLE IF NOT EXISTS studenti (id INT AUTO_INCREMENT PRIMARY KEY, nome VARCHAR(50), cognome VARCHAR(50), corso_id INT, FOREIGN KEY (corso_id) REFERENCES corsi(id))");
+
+echo "Database creato.";
+?>
