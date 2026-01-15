@@ -2,7 +2,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.net.*;
 
-public class ClientUtente extends JFrame {
+public class ClientGUI extends JFrame {
     private static final String SERVER_ADDR = "127.0.0.1"; // Indirizzo Server (Localhost)
     private static final int SERVER_PORT = 9876;
 
@@ -17,7 +17,7 @@ public class ClientUtente extends JFrame {
     private JLabel lblTime;
     private JTextField inputField;
 
-    public ClientUtente() {
+    public ClientGUI() {
         super("Telecronaca Live - Spettatore");
 
         username = JOptionPane.showInputDialog("Inserisci il tuo Username:");
@@ -135,6 +135,6 @@ public class ClientUtente extends JFrame {
     }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(ClientUtente::new);
+        SwingUtilities.invokeLater(ClientGUI::new);
     }
 }

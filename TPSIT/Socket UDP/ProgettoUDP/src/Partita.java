@@ -1,35 +1,39 @@
 public class Partita {
-    private String squadraCasa;
-    private String squadraOspite;
+    private Squadra casa;
+    private Squadra ospite;
     private String citta;
     private String campo;
     private String orario;
-    private int punteggioCasa;
-    private int punteggioOspite;
+    private int golCasa = 0;
+    private int golOspite = 0;
 
-    public Partita(String casa, String ospite, String citta, String campo, String orario) {
-        this.squadraCasa = casa;
-        this.squadraOspite = ospite;
+    public Partita(Squadra casa, Squadra ospite, String citta, String campo, String orario) {
+        this.casa = casa;
+        this.ospite = ospite;
         this.citta = citta;
         this.campo = campo;
         this.orario = orario;
-        this.punteggioCasa = 0;
-        this.punteggioOspite = 0;
     }
 
-    public void aggiungiGolCasa() { this.punteggioCasa++; }
-    public void aggiungiGolOspite() { this.punteggioOspite++; }
-
-    // Stringa formattata per l'intestazione
-    public String getHeader() {
-        return "\n=========================================\n" +
-                "      " + squadraCasa + " " + punteggioCasa + " - " + punteggioOspite + " " + squadraOspite + "\n" +
-                "-----------------------------------------\n" +
-                "   " + orario + " | " + campo + " (" + citta + ")\n" +
-                "=========================================\n";
+    public void segnaCasa() {
+        golCasa++;
     }
 
-    public String getScoreString() {
-        return squadraCasa + " " + punteggioCasa + " - " + punteggioOspite + " " + squadraOspite;
+    public void segnaOspite() {
+        golOspite++;
+    }
+
+    // Restituisce l'intestazione formattata per la GUI
+    public String getIntestazione() {
+        return " --- " + casa.getNome() + " " + golCasa + " - " + golOspite + " " + ospite.getNome() + " --- \n" +
+                "Campo: " + campo + " (" + citta + ") | Ore: " + orario;
+    }
+
+    public Squadra getSquadraCasa() {
+        return casa;
+    }
+
+    public Squadra getSquadraOspite() {
+        return ospite;
     }
 }

@@ -3,7 +3,7 @@ import java.awt.*;
 import java.net.*;
 import java.util.*;
 
-public class ServerTelecronaca extends JFrame {
+public class ServerGUI extends JFrame {
     // Configurazione Rete
     private static final int PORT = 9876;
     private DatagramSocket socket;
@@ -25,7 +25,7 @@ public class ServerTelecronaca extends JFrame {
     private JPanel panelControlli;
     private JButton btnStart;
 
-    public ServerTelecronaca() {
+    public ServerGUI() {
         super("Server Telecronaca - Pannello Operatore");
         campionato = new Campionato();
 
@@ -287,6 +287,6 @@ public class ServerTelecronaca extends JFrame {
     }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(ServerTelecronaca::new);
+        SwingUtilities.invokeLater(ServerGUI::new);
     }
 }
