@@ -1,289 +1,316 @@
 import javax.swing.*;
 import java.awt.*;
-import java.net.*;
-import java.util.*;
 
 public class ServerGUI extends JFrame {
-    // Configurazione Rete
-    private static final int PORT = 9876;
-    private DatagramSocket socket;
-    private Set<SocketAddress> clientList = Collections.synchronizedSet(new HashSet<>());
-    private boolean serverRunning = true;
 
-    // Logica Partita
-    private Partita partita;
+    private ServerLogica logica;
+
+    private JTextArea areaLog;
+    private JTextArea areaChat;
+
+    private JLabel lblHeader;
+    private JLabel lblTempo;
+
     private Campionato campionato;
+    private Partita partitaCorrente;
     private String nomeOperatore;
-    private int minuto = 0;
-    private boolean inCorso = false;
-    private int tempoDiGioco = 1; // 1 = Primo Tempo, 2 = Secondo Tempo
+    private int portServer = 9876;
 
-    // Elementi Grafici
-    private JTextArea logArea;
-    private JLabel lblPunteggio;
-    private JLabel lblMinuto;
-    private JPanel panelControlli;
+    // BOTTONI
     private JButton btnStart;
+    private JButton btnSecondoTempo;
+    private JButton btnStop;
+    private JButton btnGolCasa;
+    private JButton btnGolOspite;
+    private JButton btnGiallo;
+    private JButton btnRosso;
+    private JButton btnEventoLibero;
+    private JButton btnMsg;
 
     public ServerGUI() {
-        super("Server Telecronaca - Pannello Operatore");
+        super("Server Telecronaca");
         campionato = new Campionato();
 
-        // --- STEP 1: LOGIN OPERATORE ---
-        if (!effettuaLogin()) {
-            System.exit(0);
-        }
+        // Login operatore
+        if (!effettuaLogin()) System.exit(0);
 
-        // --- STEP 2: SETUP PARTITA ---
-        if (!configuraPartita()) {
-            System.exit(0);
-        }
+        // Configura partita (scegli squadre e porta)
+        if (!configuraPartita()) System.exit(0);
 
-        // --- STEP 3: AVVIO INTERFACCIA E THREAD ---
-        initMainInterface();
-        startServerThreads();
+        initGUI();
+
+        // Avvia logica server
+        logica = new ServerLogica(this, portServer, nomeOperatore);
     }
 
-    private boolean effettuaLogin() {
-        JPanel loginPanel = new JPanel(new GridLayout(3, 2, 10, 10));
-        JTextField userField = new JTextField();
-        JPasswordField passField = new JPasswordField();
-
-        loginPanel.add(new JLabel("Username Operatore:"));
-        loginPanel.add(userField);
-        loginPanel.add(new JLabel("Password (mondoCalcio):"));
-        loginPanel.add(passField);
-
-        int result = JOptionPane.showConfirmDialog(null, loginPanel, "Login Operatore", JOptionPane.OK_CANCEL_OPTION);
-
-        if (result == JOptionPane.OK_OPTION) {
-            String pass = new String(passField.getPassword());
-            if (!pass.equals("mondoCalcio")) {
-                JOptionPane.showMessageDialog(null, "Password Errata!");
-                return false;
-            }
-            nomeOperatore = userField.getText();
-            if(nomeOperatore.isEmpty()) nomeOperatore = "Operatore";
-            return true;
-        }
-        return false;
-    }
-
-    private boolean configuraPartita() {
-        JPanel setupPanel = new JPanel(new GridLayout(5, 2));
-        JComboBox<Squadra> comboCasa = new JComboBox<>(new Vector<>(campionato.getSquadre()));
-        JComboBox<Squadra> comboOspite = new JComboBox<>(new Vector<>(campionato.getSquadre()));
-        JTextField txtCitta = new JTextField("Milano");
-        JTextField txtCampo = new JTextField("San Siro");
-        JTextField txtOrario = new JTextField("20:45");
-
-        setupPanel.add(new JLabel("Squadra Casa:")); setupPanel.add(comboCasa);
-        setupPanel.add(new JLabel("Squadra Ospite:")); setupPanel.add(comboOspite);
-        setupPanel.add(new JLabel("Città:")); setupPanel.add(txtCitta);
-        setupPanel.add(new JLabel("Campo:")); setupPanel.add(txtCampo);
-        setupPanel.add(new JLabel("Orario:")); setupPanel.add(txtOrario);
-
-        int result = JOptionPane.showConfirmDialog(null, setupPanel, "Configurazione Partita", JOptionPane.OK_CANCEL_OPTION);
-
-        if (result == JOptionPane.OK_OPTION) {
-            partita = new Partita((Squadra)comboCasa.getSelectedItem(), (Squadra)comboOspite.getSelectedItem(),
-                    txtCitta.getText(), txtCampo.getText(), txtOrario.getText());
-            return true;
-        }
-        return false;
-    }
-
-    private void initMainInterface() {
-        setSize(800, 600);
+    private void initGUI() {
+        setSize(900, 650);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
 
-        // Header
-        JPanel header = new JPanel(new GridLayout(2, 1));
-        header.setBackground(Color.LIGHT_GRAY);
-        lblPunteggio = new JLabel(partita.getIntestazione(), SwingConstants.CENTER);
-        lblPunteggio.setFont(new Font("Arial", Font.BOLD, 16));
-        lblMinuto = new JLabel("Minuto: 0' - IN ATTESA DI AVVIO", SwingConstants.CENTER);
-        header.add(lblPunteggio);
-        header.add(lblMinuto);
-        add(header, BorderLayout.NORTH);
+        // HEADER
+        JPanel panelNord = new JPanel(new GridLayout(3, 1));
+        panelNord.setBackground(Color.LIGHT_GRAY);
 
-        // Log Centrale
-        logArea = new JTextArea();
-        logArea.setEditable(false);
-        add(new JScrollPane(logArea), BorderLayout.CENTER);
+        lblHeader = new JLabel(partitaCorrente.getIntestazione(), SwingConstants.CENTER);
+        lblHeader.setFont(new Font("Arial", Font.BOLD, 16));
 
-        // Pannello Controlli
-        panelControlli = new JPanel(new GridLayout(2, 4, 5, 5));
+        lblTempo = new JLabel("0'", SwingConstants.CENTER);
+        lblTempo.setFont(new Font("Arial", Font.BOLD, 20));
 
-        JButton btnGolCasa = new JButton("GOL " + partita.getSquadraCasa().getNome());
-        JButton btnGolOspite = new JButton("GOL " + partita.getSquadraOspite().getNome());
-        JButton btnGiallo = new JButton("Cartellino Giallo");
-        JButton btnRosso = new JButton("Cartellino Rosso");
-        JButton btnRigore = new JButton("Rigore");
-        JButton btnMsg = new JButton("Invia Messaggio");
+        JLabel lblInfo = new JLabel("Operatore: " + nomeOperatore + " | Porta: " + portServer, SwingConstants.CENTER);
+
+        panelNord.add(lblHeader);
+        panelNord.add(lblTempo);
+        panelNord.add(lblInfo);
+
+        add(panelNord, BorderLayout.NORTH);
+
+        // LOG + CHAT
+        JPanel panelCentro = new JPanel(new GridLayout(1, 2, 5, 5));
+
+        areaLog = new JTextArea();
+        areaLog.setEditable(false);
+
+        areaChat = new JTextArea();
+        areaChat.setEditable(false);
+
+        panelCentro.add(new JScrollPane(areaLog));
+        panelCentro.add(new JScrollPane(areaChat));
+
+        add(panelCentro, BorderLayout.CENTER);
+
+        // BOTTONI
+        JPanel panelSud = new JPanel(new GridLayout(3, 3, 5, 5));
+
         btnStart = new JButton("AVVIA PARTITA");
-        btnStart.setBackground(Color.GREEN);
+        btnSecondoTempo = new JButton("AVVIA SECONDO TEMPO");
+        btnStop = new JButton("TERMINA PARTITA");
 
-        // Listener Pulsanti
-        btnGolCasa.addActionListener(e -> gestioneGol(partita.getSquadraCasa(), true));
-        btnGolOspite.addActionListener(e -> gestioneGol(partita.getSquadraOspite(), false));
-        btnGiallo.addActionListener(e -> gestioneCartellino("Giallo"));
-        btnRosso.addActionListener(e -> gestioneCartellino("Rosso"));
-        btnRigore.addActionListener(e -> inviaEvento("CALCIO DI RIGORE!"));
+        btnGolCasa = new JButton("GOL " + partitaCorrente.getSquadraCasa().getNome());
+        btnGolOspite = new JButton("GOL " + partitaCorrente.getSquadraOspite().getNome());
+
+        btnGiallo = new JButton("Cartellino Giallo");
+        btnRosso = new JButton("Cartellino Rosso");
+        btnEventoLibero = new JButton("Evento Libero");
+        btnMsg = new JButton("Invia Messaggio Chat");
+
+        // Bottoni disattivi inizialmente
+        setEventButtonsEnabled(false);
+        btnSecondoTempo.setEnabled(false);
+        btnStop.setEnabled(false);
+
+        // Azioni bottoni
+        btnStart.addActionListener(e -> {
+            logica.avviaPartitaTimer();
+            btnStart.setEnabled(false);
+            btnStop.setEnabled(true);
+            appendLog("--- PARTITA AVVIATA (Timer partito) ---");
+            setEventButtonsEnabled(true);
+        });
+
+        btnSecondoTempo.addActionListener(e -> {
+            logica.avviaSecondoTempo();
+            btnSecondoTempo.setEnabled(false);
+            setEventButtonsEnabled(true);
+        });
+
+        btnStop.addActionListener(e -> {
+            logica.terminaPartita();
+            btnStop.setEnabled(false);
+            setEventButtonsEnabled(false);
+        });
+
+        btnGolCasa.addActionListener(e -> gestisciGol(partitaCorrente.getSquadraCasa(), true));
+        btnGolOspite.addActionListener(e -> gestisciGol(partitaCorrente.getSquadraOspite(), false));
+
+        btnGiallo.addActionListener(e -> gestisciCartellino("Cartellino Giallo"));
+        btnRosso.addActionListener(e -> gestisciCartellino("Cartellino Rosso"));
+
+        btnEventoLibero.addActionListener(e -> {
+            String msg = JOptionPane.showInputDialog("Inserisci evento:");
+            if (msg != null) logica.inviaEvento(msg);
+        });
 
         btnMsg.addActionListener(e -> {
-            String msg = JOptionPane.showInputDialog("Messaggio operatore:");
-            if(msg != null && !msg.isEmpty()) broadcast("CHAT:" + nomeOperatore + " (OP):" + msg);
+            String msg = JOptionPane.showInputDialog("Messaggio:");
+            if (msg != null) logica.broadcast("CHAT:" + logica.getMinuto() + "' - " + nomeOperatore + " (OP): " + msg);
         });
 
-        btnStart.addActionListener(e -> {
-            if(!inCorso) {
-                inCorso = true;
-                btnStart.setEnabled(false);
-                broadcast("SYS:Partita Iniziata! Benvenuti da " + nomeOperatore);
-                new Thread(this::gestisciTimer).start();
-            }
-        });
+        panelSud.add(btnStart);
+        panelSud.add(btnSecondoTempo);
+        panelSud.add(btnStop);
 
-        panelControlli.add(btnStart);
-        panelControlli.add(btnGolCasa);
-        panelControlli.add(btnGolOspite);
-        panelControlli.add(btnGiallo);
-        panelControlli.add(btnRosso);
-        panelControlli.add(btnRigore);
-        panelControlli.add(btnMsg);
+        panelSud.add(btnGolCasa);
+        panelSud.add(btnGolOspite);
+        panelSud.add(btnGiallo);
 
-        add(panelControlli, BorderLayout.SOUTH);
+        panelSud.add(btnRosso);
+        panelSud.add(btnEventoLibero);
+        panelSud.add(btnMsg);
+
+        add(panelSud, BorderLayout.SOUTH);
+
         setVisible(true);
     }
 
-    private void gestioneGol(Squadra s, boolean isCasa) {
-        // Chiede chi ha segnato selezionandolo dalla rosa della squadra
-        Giocatore marcatore = (Giocatore) JOptionPane.showInputDialog(this,
-                "Chi ha segnato?", "Marcatore", JOptionPane.QUESTION_MESSAGE, null,
-                s.getRosa().toArray(), s.getRosa().get(0));
-
-        String nomeMarcatore = (marcatore != null) ? marcatore.getNome() : "Sconosciuto";
-
-        if(isCasa) partita.segnaCasa(); else partita.segnaOspite();
-
-        lblPunteggio.setText(partita.getIntestazione());
-        inviaEvento("GOOOL! " + s.getNome() + "! Ha segnato " + nomeMarcatore + "!");
-
-        // Aggiorna header su tutti i client
-        broadcast("HEADER:" + partita.getIntestazione());
+    // Abilita/disabilita bottoni evento
+    private void setEventButtonsEnabled(boolean enabled) {
+        btnGolCasa.setEnabled(enabled);
+        btnGolOspite.setEnabled(enabled);
+        btnGiallo.setEnabled(enabled);
+        btnRosso.setEnabled(enabled);
+        btnEventoLibero.setEnabled(enabled);
+        btnMsg.setEnabled(enabled);
     }
 
-    private void gestioneCartellino(String colore) {
-        String chi = JOptionPane.showInputDialog("A chi?");
-        inviaEvento("Cartellino " + colore + " per " + (chi != null ? chi : "sconosciuto"));
+    // Login operatore
+    private boolean effettuaLogin() {
+        JTextField userField = new JTextField();
+        JPasswordField passField = new JPasswordField();
+
+        Object[] message = {
+                "Username Operatore:", userField,
+                "Password (mondoCalcio):", passField
+        };
+
+        int option = JOptionPane.showConfirmDialog(null, message, "Login Server", JOptionPane.OK_CANCEL_OPTION);
+
+        if (option == JOptionPane.OK_OPTION) {
+            String pass = new String(passField.getPassword());
+
+            if (pass.equals("mondoCalcio")) {
+                nomeOperatore = userField.getText();
+                if (nomeOperatore.isEmpty()) nomeOperatore = "Admin";
+                return true;
+            } else {
+                JOptionPane.showMessageDialog(null, "Password Errata!");
+            }
+        }
+        return false;
     }
 
-    private void inviaEvento(String testo) {
-        String msg = minuto + "' - " + testo;
-        appendLog(msg);
-        broadcast("EVENTO:" + msg);
-    }
+    // Configura la partita scegliendo le squadre e la porta
+    private boolean configuraPartita() {
+        Squadra[] arraySquadre = campionato.getSquadre();
+        JComboBox<Squadra> comboCasa = new JComboBox<>(arraySquadre);
+        JComboBox<Squadra> comboOspite = new JComboBox<>(arraySquadre);
 
-    // --- LOGICA TIMER AUTOMATICO ---
-    private void gestisciTimer() {
-        try {
-            // Primo tempo
-            while (inCorso && minuto < 45) {
-                Thread.sleep(1000); // 1 secondo reale = 1 minuto simulato
-                minuto++;
-                aggiornaMinutoGUI();
+        JTextField txtPorta = new JTextField("9876");
+        JTextField txtCitta = new JTextField("Milano");
+
+        Object[] message = {
+                "Squadra Casa:", comboCasa,
+                "Squadra Ospite:", comboOspite,
+                "Porta Server (es. 9876, 9877):", txtPorta,
+                "Città:", txtCitta
+        };
+
+        int option = JOptionPane.showConfirmDialog(null, message, "Configura Partita", JOptionPane.OK_CANCEL_OPTION);
+
+        if (option == JOptionPane.OK_OPTION) {
+            Squadra c = (Squadra) comboCasa.getSelectedItem();
+            Squadra o = (Squadra) comboOspite.getSelectedItem();
+
+            try {
+                portServer = Integer.parseInt(txtPorta.getText());
+            } catch (NumberFormatException e) {
+                portServer = 9876;
             }
 
-            // Fine primo tempo
-            inviaEvento("FINE PRIMO TEMPO");
-            broadcast("SYS:--- Intervallo ---");
-            Thread.sleep(3000); // Pausa intervallo (3 secondi simulati)
-
-            // Secondo tempo
-            inviaEvento("INIZIO SECONDO TEMPO");
-            tempoDiGioco = 2;
-            minuto = 45;
-
-            while (inCorso && minuto < 90) {
-                Thread.sleep(1000);
-                minuto++;
-                aggiornaMinutoGUI();
+            if (c.getNome().equals(o.getNome())) {
+                JOptionPane.showMessageDialog(null, "Le squadre devono essere diverse!");
+                return configuraPartita();
             }
 
-            inviaEvento("FISCHIO FINALE! La partita è terminata.");
-            broadcast("SYS:--- PARTITA TERMINATA ---");
-            inCorso = false;
+            partitaCorrente = new Partita(c, o, txtCitta.getText(), "Stadio", "20:45");
+            return true;
+        }
+        return false;
+    }
 
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+    // Gestisce gol: scegli il marcatore e invia evento
+    private void gestisciGol(Squadra s, boolean isCasa) {
+        Giocatore[] rosa = s.getRosaEffettiva();
+
+        Giocatore marcatore = (Giocatore) JOptionPane.showInputDialog(
+                this,
+                "Chi ha segnato?",
+                "GOL",
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                rosa,
+                rosa[0]
+        );
+
+        if (marcatore != null) {
+            if (isCasa) partitaCorrente.segnaCasa();
+            else partitaCorrente.segnaOspite();
+
+            lblHeader.setText(partitaCorrente.getIntestazione());
+
+            String evento = "GOOOL! " + s.getNome() + "! Ha segnato " + marcatore.getNome();
+            logica.inviaEvento(evento);
+            logica.broadcast("HEADER:" + partitaCorrente.getIntestazione());
         }
     }
 
-    private void aggiornaMinutoGUI() {
-        SwingUtilities.invokeLater(() -> lblMinuto.setText("Minuto: " + minuto + "' (" + (tempoDiGioco==1?"1T":"2T") + ")"));
-        broadcast("TIME:" + minuto + "'");
-    }
+    // Gestisce cartellini: scegli squadra e giocatore
+    private void gestisciCartellino(String tipo) {
+        Squadra[] squadre = { partitaCorrente.getSquadraCasa(), partitaCorrente.getSquadraOspite() };
 
-    // --- RETE UDP ---
-    private void startServerThreads() {
-        try {
-            socket = new DatagramSocket(PORT);
-            appendLog("Server avviato su porta " + PORT);
+        Squadra sqScelta = (Squadra) JOptionPane.showInputDialog(
+                this,
+                "Squadra?",
+                tipo,
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                squadre,
+                squadre[0]
+        );
 
-            new Thread(() -> {
-                byte[] buffer = new byte[1024];
-                while (serverRunning) {
-                    try {
-                        DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
-                        socket.receive(packet);
-                        String received = new String(packet.getData(), 0, packet.getLength());
-                        SocketAddress clientAddr = packet.getSocketAddress();
+        if (sqScelta == null) return;
 
-                        if (received.startsWith("JOIN:")) {
-                            String nomeClient = received.split(":")[1];
-                            if (!clientList.contains(clientAddr)) {
-                                clientList.add(clientAddr);
-                                appendLog("Nuovo spettatore: " + nomeClient);
-                                broadcast("SYS:" + nomeClient + " è entrato nella sessione.");
-                                // Invia info iniziali SOLO al nuovo arrivato
-                                sendTo("HEADER:" + partita.getIntestazione(), clientAddr);
-                            }
-                        } else if (received.startsWith("CHAT:")) {
-                            String[] parts = received.split(":", 3);
-                            String user = parts[1];
-                            String msg = parts[2];
-                            broadcast("CHAT:" + user + ": " + msg);
-                        }
-                    } catch (Exception e) { e.printStackTrace(); }
-                }
-            }).start();
+        Giocatore[] rosa = sqScelta.getRosaEffettiva();
 
-        } catch (SocketException e) { e.printStackTrace(); }
-    }
+        Giocatore giuocoScelto = (Giocatore) JOptionPane.showInputDialog(
+                this,
+                "Giocatore?",
+                tipo,
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                rosa,
+                rosa[0]
+        );
 
-    private void broadcast(String msg) {
-        synchronized(clientList) {
-            for (SocketAddress dest : clientList) sendTo(msg, dest);
-        }
-        // Log locale (pulendo i tag di protocollo per leggibilità)
-        String clean = msg.replaceAll("^(CHAT:|SYS:|EVENTO:)", "");
-        if (!msg.startsWith("TIME:") && !msg.startsWith("HEADER:")) {
-            appendLog(clean);
+        if (giuocoScelto != null) {
+            logica.inviaEvento(tipo + " per " + giuocoScelto.getNome() + " (" + sqScelta.getNome() + ")");
         }
     }
 
-    private void sendTo(String msg, SocketAddress dest) {
-        try {
-            byte[] data = msg.getBytes();
-            DatagramPacket packet = new DatagramPacket(data, data.length, dest);
-            socket.send(packet);
-        } catch (Exception e) { e.printStackTrace(); }
+    // Metodi per aggiornare la GUI
+    public void appendLog(String txt) {
+        SwingUtilities.invokeLater(() -> areaLog.append(txt + "\n"));
     }
 
-    private void appendLog(String txt) {
-        SwingUtilities.invokeLater(() -> logArea.append(txt + "\n"));
+    public void appendChat(String txt) {
+        SwingUtilities.invokeLater(() -> areaChat.append(txt + "\n"));
+    }
+
+    public void setTempo(String tempo) {
+        SwingUtilities.invokeLater(() -> lblTempo.setText(tempo));
+    }
+
+    public void setBottoniSecondoTempo(boolean enabled) {
+        SwingUtilities.invokeLater(() -> btnSecondoTempo.setEnabled(enabled));
+    }
+
+    public void setBottoniEventi(boolean enabled) {
+        SwingUtilities.invokeLater(() -> setEventButtonsEnabled(enabled));
+    }
+
+    public Partita getPartita() {
+        return partitaCorrente;
     }
 
     public static void main(String[] args) {

@@ -1,6 +1,4 @@
-import java.io.Serializable;
-
-public class Giocatore implements Serializable {
+public class Giocatore {
     private String nome;
     private int numero;
 
@@ -17,6 +15,7 @@ public class Giocatore implements Serializable {
         return numero;
     }
 
+    // Stampa il giocatore come "numero - nome"
     @Override
     public String toString() {
         return numero + " - " + nome;

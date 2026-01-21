@@ -1,137 +1,132 @@
 import javax.swing.*;
 import java.awt.*;
-import java.net.*;
+import java.awt.event.ActionListener;
 
 public class ClientGUI extends JFrame {
-    private static final String SERVER_ADDR = "127.0.0.1"; // Indirizzo Server (Localhost)
-    private static final int SERVER_PORT = 9876;
 
-    private DatagramSocket socket;
-    private InetAddress serverIp;
-    private String username;
-    private boolean running = true;
 
-    // Elementi GUI
-    private JTextArea chatArea;
+    private ClientLogica logica;
+    private JTextArea areaChat;
     private JLabel lblHeader;
-    private JLabel lblTime;
-    private JTextField inputField;
+    private JLabel lblTempo;
+    private String username;
 
     public ClientGUI() {
         super("Telecronaca Live - Spettatore");
 
-        username = JOptionPane.showInputDialog("Inserisci il tuo Username:");
-        if (username == null || username.trim().isEmpty()) System.exit(0);
+        // Dialog iniziale: IP, porta, username
+        JTextField ipField = new JTextField("127.0.0.1");
+        JTextField portField = new JTextField("9876");
+        JTextField userField = new JTextField();
+
+        Object[] message = {
+                "IP Server:", ipField,
+                "Porta Partita (es. 9876):", portField,
+                "Tuo Username:", userField
+        };
+
+        int option = JOptionPane.showConfirmDialog(null, message, "Entra in Partita", JOptionPane.OK_CANCEL_OPTION);
+        if (option != JOptionPane.OK_OPTION)
+            System.exit(0);
+
+        username = userField.getText();
+        int port = Integer.parseInt(portField.getText());
 
         initGUI();
-        connectToServer();
-        startReceiver();
+
+        // Inizializza la logica client e si connette
+        logica = new ClientLogica(this);
+        boolean connesso = logica.connettiti(ipField.getText(), port, username);
+        if (!connesso) {
+            JOptionPane.showMessageDialog(this, "Errore connessione!");
+            System.exit(0);
+        }
     }
 
     private void initGUI() {
-        setSize(600, 500);
+        setSize(500, 450);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
 
-        // Header Partita
-        JPanel topPanel = new JPanel(new GridLayout(2, 1));
-        topPanel.setBackground(new Color(50, 50, 50));
+        // Header
+        JPanel pnlNord = new JPanel(new GridLayout(2, 1));
+        pnlNord.setBackground(Color.DARK_GRAY);
 
-        lblHeader = new JLabel("In attesa di dati partita...", SwingConstants.CENTER);
+        lblHeader = new JLabel("In attesa dati...", SwingConstants.CENTER);
         lblHeader.setForeground(Color.WHITE);
         lblHeader.setFont(new Font("SansSerif", Font.BOLD, 14));
 
-        lblTime = new JLabel("0'", SwingConstants.CENTER);
-        lblTime.setForeground(Color.YELLOW);
-        lblTime.setFont(new Font("SansSerif", Font.BOLD, 18));
+        JPanel pnlTime = new JPanel(new BorderLayout());
+        pnlTime.setBackground(Color.DARK_GRAY);
 
-        topPanel.add(lblHeader);
-        topPanel.add(lblTime);
-        add(topPanel, BorderLayout.NORTH);
+        lblTempo = new JLabel("0'", SwingConstants.CENTER);
+        lblTempo.setForeground(Color.YELLOW);
+        lblTempo.setFont(new Font("Arial", Font.BOLD, 20));
 
-        // Area Chat/Cronaca
-        chatArea = new JTextArea();
-        chatArea.setEditable(false);
-        chatArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
-        add(new JScrollPane(chatArea), BorderLayout.CENTER);
+        // Bottone "Cambia Partita" -> disconnette e riavvia GUI
+        JButton btnEsci = new JButton("Cambia Partita");
+        btnEsci.addActionListener(e -> {
+            logica.disconnettiti();
+            dispose();
+            new ClientGUI();
+        });
 
-        // Input
-        JPanel bottomPanel = new JPanel(new BorderLayout());
-        inputField = new JTextField();
-        JButton btnSend = new JButton("Invia");
+        pnlTime.add(lblTempo, BorderLayout.CENTER);
+        pnlTime.add(btnEsci, BorderLayout.EAST);
 
-        btnSend.addActionListener(e -> sendMessage());
-        inputField.addActionListener(e -> sendMessage());
+        pnlNord.add(lblHeader);
+        pnlNord.add(pnlTime);
 
-        bottomPanel.add(inputField, BorderLayout.CENTER);
-        bottomPanel.add(btnSend, BorderLayout.EAST);
-        add(bottomPanel, BorderLayout.SOUTH);
+        add(pnlNord, BorderLayout.NORTH);
+
+        // Area chat (centrale)
+        areaChat = new JTextArea();
+        areaChat.setEditable(false);
+        areaChat.setFont(new Font("Monospaced", Font.PLAIN, 14));
+        add(new JScrollPane(areaChat), BorderLayout.CENTER);
+
+        // Input chat (sud)
+        JPanel pnlSud = new JPanel(new BorderLayout());
+        JTextField txtInput = new JTextField();
+        JButton btnInvia = new JButton("Invia");
+
+        ActionListener sendAction = e -> {
+            if (!txtInput.getText().isEmpty()) {
+                // Invio messaggio al server
+                logica.invia("CHAT:" + username + ": " + txtInput.getText());
+                txtInput.setText("");
+            }
+        };
+
+        btnInvia.addActionListener(sendAction);
+        txtInput.addActionListener(sendAction);
+
+        pnlSud.add(txtInput, BorderLayout.CENTER);
+        pnlSud.add(btnInvia, BorderLayout.EAST);
+
+        add(pnlSud, BorderLayout.SOUTH);
 
         setVisible(true);
     }
 
-    private void sendMessage() {
-        String txt = inputField.getText();
-        if (!txt.trim().isEmpty()) {
-            sendPacket("CHAT:" + username + ":" + txt);
-            inputField.setText("");
-        }
-    }
-
-    private void connectToServer() {
-        try {
-            socket = new DatagramSocket();
-            serverIp = InetAddress.getByName(SERVER_ADDR);
-            sendPacket("JOIN:" + username);
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Errore connessione: " + e.getMessage());
-        }
-    }
-
-    private void sendPacket(String msg) {
-        try {
-            byte[] data = msg.getBytes();
-            DatagramPacket packet = new DatagramPacket(data, data.length, serverIp, SERVER_PORT);
-            socket.send(packet);
-        } catch (Exception e) { e.printStackTrace(); }
-    }
-
-    private void startReceiver() {
-        new Thread(() -> {
-            byte[] buffer = new byte[1024];
-            while (running) {
-                try {
-                    DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
-                    socket.receive(packet);
-                    String msg = new String(packet.getData(), 0, packet.getLength());
-
-                    SwingUtilities.invokeLater(() -> processMessage(msg));
-                } catch (Exception e) { e.printStackTrace(); }
+    // Riceve messaggi dal server e li elabora in base al prefisso
+    public void elaboraMessaggio(String msg) {
+        SwingUtilities.invokeLater(() -> {
+            if (msg.startsWith("TIME:")) {
+                lblTempo.setText(msg.substring(5));
+            } else if (msg.startsWith("HEADER:")) {
+                lblHeader.setText(msg.substring(7));
+            } else if (msg.startsWith("SYS:")) {
+                areaChat.append("[INFO] " + msg.substring(4) + "\n");
+                areaChat.setCaretPosition(areaChat.getDocument().getLength());
+            } else if (msg.startsWith("EVENTO:")) {
+                areaChat.append(">>> " + msg.substring(7).toUpperCase() + " <<<\n");
+                areaChat.setCaretPosition(areaChat.getDocument().getLength());
+            } else if (msg.startsWith("CHAT:")) {
+                areaChat.append(msg.substring(5) + "\n");
+                areaChat.setCaretPosition(areaChat.getDocument().getLength());
             }
-        }).start();
-    }
-
-    private void processMessage(String msg) {
-        if (msg.startsWith("HEADER:")) {
-            // Aggiorna intestazione (Squadre, Risultato)
-            lblHeader.setText("<html><center>" + msg.substring(7).replaceAll("\n", "<br>") + "</center></html>");
-        } else if (msg.startsWith("TIME:")) {
-            // Aggiorna Minuto
-            lblTime.setText(msg.substring(5));
-        } else if (msg.startsWith("EVENTO:")) {
-            // Mostra Eventi Partita
-            String evento = msg.substring(7);
-            chatArea.append(" >>> " + evento + "\n");
-            chatArea.setCaretPosition(chatArea.getDocument().getLength());
-        } else if (msg.startsWith("CHAT:")) {
-            // Mostra Chat Utenti
-            String chat = msg.substring(5);
-            chatArea.append(chat + "\n");
-            chatArea.setCaretPosition(chatArea.getDocument().getLength());
-        } else if (msg.startsWith("SYS:")) {
-            // Messaggi di sistema (es. "Tizio è entrato")
-            chatArea.append("[INFO] " + msg.substring(4) + "\n");
-        }
+        });
     }
 
     public static void main(String[] args) {

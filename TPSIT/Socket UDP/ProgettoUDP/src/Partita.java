@@ -15,18 +15,20 @@ public class Partita {
         this.orario = orario;
     }
 
+    // Aumenta il punteggio della squadra di casa
     public void segnaCasa() {
         golCasa++;
     }
 
+    // Aumenta il punteggio della squadra ospite
     public void segnaOspite() {
         golOspite++;
     }
 
-    // Restituisce l'intestazione formattata per la GUI
+    // Restituisce l'intestazione della partita (es. Inter 1 - 0 Milan | Stadio ...)
     public String getIntestazione() {
-        return " --- " + casa.getNome() + " " + golCasa + " - " + golOspite + " " + ospite.getNome() + " --- \n" +
-                "Campo: " + campo + " (" + citta + ") | Ore: " + orario;
+        return casa.getNome() + " " + golCasa + " - " + golOspite + " " + ospite.getNome() +
+                " | " + campo + " (" + citta + ")";
     }
 
     public Squadra getSquadraCasa() {
