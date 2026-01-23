@@ -63,7 +63,6 @@ public class ClientLogica {
                     gui.elaboraMessaggio(msg);
 
                 } catch (Exception e) {
-                    System.out.println("Exception catturata:"+e.getMessage());
                 }
             }
         }).start();
