@@ -33,7 +33,9 @@ $rows = $pdo->query("SELECT * FROM $tabella")->fetchAll();
         <a href="tabelle.php?tabella=corso">Corsi</a> | 
         <a href="tabelle.php?tabella=insegna">Insegnamenti</a> | 
         <a href="tabelle.php?tabella=frequenta">Frequenze</a> | 
-        <strong><a href="ricerca.php">Ricerca Studente</a></strong>
+        <strong><a href="ricerca.php">Ricerca Studente</a></strong> | 
+        <a href="visualizzaCorsiStud.php">Corsi studente</a> | 
+        <a href="visualizzaCorsiDocenti.php">Corsi docenti</a> | 
     </div>
 
     <h2>Tabella: <?php echo $tabella; ?></h2>
